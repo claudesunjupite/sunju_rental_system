@@ -201,7 +201,14 @@ tr:hover td { background: #fcfbf7; }
     <h1>SUN JUPITER Rental System</h1>
     <div class="sub">ระบบจัดเก็บค่าเช่าเครื่องจักร — Prototype</div>
   </div>
-  <div style="font-size: 12px; opacity: 0.8;" id="today-display"></div>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div id="sync-status" style="font-size: 11px; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: var(--radius); color: #999;">● ออฟไลน์</div>
+    <div style="font-size: 12px; opacity: 0.8;" id="today-display"></div>
+    <div id="role-switch" style="display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(255,255,255,0.1); border-radius: var(--radius); font-size: 12px; cursor: pointer;" onclick="toggleRole()">
+      <span id="role-icon">👤</span>
+      <span id="role-label">Regular user</span>
+    </div>
+  </div>
 </header>
 
 <div class="container">
@@ -224,7 +231,7 @@ tr:hover td { background: #fcfbf7; }
   <div class="card">
     <h3>สถานะเครื่องจักรทุกตัว</h3>
     <table id="machine-status-tbl">
-      <thead><tr><th>รหัส</th><th>ชนิด</th><th>รุ่น</th><th>สถานะ</th><th>ปัจจุบันอยู่ที่</th></tr></thead>
+      <thead><tr><th>รหัส</th><th>ชนิด</th><th>ลักษณะ</th><th>รุ่น</th><th>สถานะ</th><th>ปัจจุบันอยู่ที่</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -249,6 +256,13 @@ tr:hover td { background: #fcfbf7; }
       <div><label>เลขผู้เสียภาษี</label><input id="cust-tax" placeholder="0105556123456"></div>
       <div><label>ผู้ติดต่อ</label><input id="cust-contact"></div>
       <div><label>เบอร์โทร</label><input id="cust-phone"></div>
+      <div>
+        <label>ระดับลูกค้า *</label>
+        <select id="cust-tier">
+          <option value="standard">Standard (มีมัดจำ+ล่วงหน้า+ขั้นต่ำ)</option>
+          <option value="premium">Premium — ลูกค้าชั้นดี (ไม่มีมัดจำ/ล่วงหน้า/ขั้นต่ำ, ชำระหลังแจ้งหนี้)</option>
+        </select>
+      </div>
     </div>
     <div style="margin-top: 8px;"><label>ที่อยู่</label><textarea id="cust-addr" rows="2"></textarea></div>
     <div class="actions"><button onclick="addCustomer()">+ เพิ่มลูกค้า</button></div>
@@ -286,43 +300,57 @@ tr:hover td { background: #fcfbf7; }
 
 <div id="panel-machines" class="panel">
   <div class="card">
-    <h2>เพิ่มแบรนด์ / รุ่น</h2>
+    <h2>ขั้นที่ 1 — เพิ่ม Brand</h2>
+    <div class="alert info">ลำดับการเพิ่มฐานข้อมูล: Brand → ชนิดสินค้า → ลักษณะ → รุ่น → ผูกกับรหัสเครื่องจักร</div>
     <div class="grid-3">
-      <div><label>แบรนด์ใหม่</label><input id="brand-name" placeholder="CREDO"><button class="small-btn secondary" style="margin-top: 4px;" onclick="addBrand()">+ เพิ่ม</button></div>
+      <div><label>ชื่อแบรนด์ใหม่</label><input id="brand-name" placeholder="CREDO"></div>
+      <div><label>หมายเหตุ (ถ้ามี)</label><input id="brand-note" placeholder="เช่น ผู้ผลิตหลักของเรา"></div>
+      <div style="display: flex; align-items: end;"><button onclick="addBrand()">+ เพิ่มแบรนด์</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ขั้นที่ 2 — เพิ่มรุ่น (Brand → Type → Subtype → Model)</h2>
+    <div class="grid-3">
       <div>
-        <label>แบรนด์</label>
+        <label>เลือกแบรนด์ *</label>
         <select id="model-brand"></select>
       </div>
       <div>
-        <label>ชนิดเครื่อง</label>
-        <select id="model-type">
+        <label>ชนิดสินค้า *</label>
+        <select id="model-type" onchange="populateSubtypeOptions()">
           <option value="tower_crane">ทาวเวอร์เครน</option>
           <option value="derrick_crane">เดอริคเครน</option>
           <option value="passenger_hoist">ลิฟท์โดยสารก่อสร้าง</option>
         </select>
       </div>
-      <div style="grid-column: span 2;"><label>ชื่อรุ่น</label><input id="model-name" placeholder="TC6515"></div>
+      <div>
+        <label>ลักษณะ *</label>
+        <select id="model-subtype"></select>
+      </div>
+      <div style="grid-column: span 2;"><label>ชื่อรุ่น *</label><input id="model-name" placeholder="TC6515"></div>
       <div style="display: flex; align-items: end;"><button onclick="addModel()">+ เพิ่มรุ่น</button></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>เพิ่มเครื่องจักร</h2>
+    <h2>ขั้นที่ 3 — เพิ่มเครื่องจักร (ผูกรุ่นกับรหัสเครื่อง)</h2>
     <div class="grid-3">
       <div><label>รหัสเครื่อง *</label><input id="m-code" placeholder="SJ-199"></div>
       <div>
-        <label>รุ่น *</label>
+        <label>เลือกรุ่น *</label>
         <select id="m-model"></select>
+        <div class="help">แสดง Brand + ชนิด + ลักษณะ + รุ่น</div>
       </div>
       <div>
         <label>สถานะเริ่มต้น</label>
         <select id="m-status">
           <option value="in_storage">เก็บกอง</option>
-          <option value="maintenance">ซ่อม/ตรวจสอบ</option>
+          <option value="pending_repair">ตรวจสอบรอซ่อมแซม</option>
         </select>
       </div>
       <div>
-        <label>คลังเก็บกอง</label>
+        <label>คลัง</label>
         <select id="m-warehouse">
           <option value="1">คลังสินค้าจตุโชติ</option>
           <option value="2">คลังสินค้าคลอง 8</option>
@@ -335,7 +363,7 @@ tr:hover td { background: #fcfbf7; }
   <div class="card">
     <h3>รายการเครื่องจักร</h3>
     <table id="machine-tbl">
-      <thead><tr><th>รหัส</th><th>ชนิด</th><th>แบรนด์</th><th>รุ่น</th><th>สถานะ</th><th>ที่อยู่ปัจจุบัน</th></tr></thead>
+      <thead><tr><th>รหัส</th><th>ชนิด</th><th>ลักษณะ</th><th>แบรนด์</th><th>รุ่น</th><th>สถานะ</th><th>ที่อยู่ปัจจุบัน</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -370,6 +398,23 @@ tr:hover td { background: #fcfbf7; }
       <div><label>เรท OT/ชม.</label><input id="k-ot" type="number" value="0"></div>
       <div><label>วันติดตั้ง *</label><input id="k-install" type="date"></div>
       <div><label>วันเริ่มคิดค่าเช่า *</label><input id="k-start" type="date"></div>
+      <div><label>ชื่อเรียกในหน่วยงาน (Mark)</label><input id="k-nickname" placeholder="เช่น TC7, Hoist-A"><div class="help">ชื่อที่ลูกค้าเรียกเครื่องตัวนี้</div></div>
+    </div>
+
+    <div id="premium-banner" class="alert success" style="display: none; margin-top: 12px;">
+      <strong>ลูกค้าชั้นดี (Premium)</strong> — เงื่อนไขพิเศษ: ไม่มีมัดจำ / ไม่มีล่วงหน้า / ไม่มีค่าเช่าขั้นต่ำ / เศษของวันคิดตามจริง / ทุกบริการชำระหลังแจ้งหนี้ / ปจ.1 ครั้งแรกฟรี
+    </div>
+
+    <div id="standard-terms-wrap">
+      <h3>เงื่อนไขสัญญาเพิ่มเติม</h3>
+      <div class="grid-3">
+        <div><label>ค่ามัดจำ (จำนวนเดือน)</label><input id="k-deposit-months" type="number" min="0" step="0.5" value="1"></div>
+        <div><label>ยอดค่ามัดจำ (บาท)</label><input id="k-deposit-amount" type="number" value="0"><div class="help">ชำระเมื่อสั่งจ้าง</div></div>
+        <div><label>ค่าเช่าล่วงหน้า (จำนวนเดือน)</label><input id="k-advance-months" type="number" min="0" step="0.5" value="1"></div>
+        <div><label>ยอดค่าเช่าล่วงหน้า (บาท)</label><input id="k-advance-amount" type="number" value="0"><div class="help">ชำระเมื่อสั่งจ้าง</div></div>
+        <div><label>ค่าเช่าขั้นต่ำ (เดือน)</label><input id="k-min-months" type="number" min="0" step="0.5" value="2"><div class="help">ถ้าเช่าเกิน → ออก CN เครดิตมัดจำ+ล่วงหน้า</div></div>
+        <div style="display: flex; align-items: end;"><label style="display: inline-flex; align-items: center; gap: 6px;"><input type="checkbox" id="k-exclude-holidays"> ไม่คิดค่าวันหยุดนักขัตฤกษ์</label></div>
+      </div>
     </div>
 
     <div id="por-jor-policy-wrap" class="alert info" style="display: none; margin-top: 14px;">
@@ -499,71 +544,141 @@ tr:hover td { background: #fcfbf7; }
 
 <div id="panel-closure" class="panel">
   <div class="card">
-    <h2>ตัดรอบ / ปิดงาน (ข้อ 10)</h2>
-    <div class="alert info">
-      เมื่อรื้อถอนเครื่องออกจากหน่วยงาน → กดปุ่มนี้เพื่อดึงยอดทั้งหมดมาหักกลบ<br>
-      ฝั่งหนี้: ค่าบริการเริ่มต้น + ค่าเช่าทุกรอบ + OT ทุกรอบ<br>
-      ฝั่งชำระ: เงินมัดจำ/ล่วงหน้า + invoice ที่ชำระแล้ว + invoice ที่ออกบิลแล้วยังไม่ชำระ
-    </div>
+    <h2>ตัดรอบ / ปิดงาน — ใบสรุปยอดคงค้างระหว่างกัน</h2>
     <div class="grid-2">
       <div>
         <label>เลือกสัญญาที่จะปิด</label>
         <select id="close-contract" onchange="loadClosure()"></select>
       </div>
+      <div><label>วันยุติสัญญา</label><input id="close-end-date" type="date" onchange="loadClosure()"></div>
     </div>
   </div>
 
   <div id="closure-wrap" class="hidden">
+    <div class="card" id="closure-header"></div>
+
     <div class="card">
-      <h3>ฝั่งหนี้ — สิ่งที่เครื่องจักรชุดนี้ก่อเป็นหนี้</h3>
-      <div id="por-jor-policy-display" class="dim" style="margin-bottom: 8px;"></div>
-      <table id="debt-services-tbl">
-        <thead><tr><th>รายการบริการ</th><th class="num">ยอดเงิน</th><th>หมายเหตุ</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <table id="debt-cycles-tbl" style="margin-top: 12px;">
-        <thead><tr><th>รอบ</th><th>Service Sheet</th><th>ช่วง</th><th class="num">ค่าเช่า</th><th class="num">OT</th><th class="num">รวม</th></tr></thead>
+      <h3>รายการค่าใช้จ่ายระหว่างกัน</h3>
+      <div class="help" style="margin-bottom: 6px;">กรอกเลข IV/BL ของแต่ละรายการ — คอลัมน์ซ้ายถ้าชำระแล้ว / ขวาถ้าออกบิลแล้วยังไม่ชำระ</div>
+      <table id="closure-items-tbl">
+        <thead><tr>
+          <th style="width: 40px;">ลำดับ</th>
+          <th>รายการ</th>
+          <th style="width: 140px;">อ้างอิง ชำระแล้ว</th>
+          <th style="width: 140px;">IV แล้วรอชำระ</th>
+          <th class="num" style="width: 120px;">ยอดเงิน (ก่อน VAT)</th>
+          <th style="width: 140px;">หมายเหตุ</th>
+        </tr></thead>
         <tbody></tbody>
       </table>
     </div>
 
     <div class="card">
-      <h3>ฝั่งชำระ — เพิ่ม/แก้ไขการชำระได้ที่นี่</h3>
-      <div class="grid-4">
-        <div><label>ประเภท</label>
-          <select id="pay-type">
-            <option value="deposit">มัดจำ</option>
-            <option value="advance">ล่วงหน้า</option>
-            <option value="installment">ชำระรายงวด</option>
-          </select>
+      <h3>รายการแจ้งหนี้และสถานะการชำระ</h3>
+      <div class="grid-3" style="margin-bottom: 16px;">
+        <div class="metric" style="background: var(--warning-bg); border-left: 4px solid var(--warning);">
+          <div class="metric-label" style="color: var(--warning);">รอชำระ</div>
+          <div class="metric-value" id="pending-total" style="color: var(--warning);">0.00</div>
+          <div class="dim" style="font-size: 11px; margin-top: 4px;"><span id="pending-count">0</span> รายการ</div>
         </div>
-        <div><label>ยอดเงิน</label><input id="pay-amount" type="number"></div>
-        <div><label>เลข IV (ชำระแล้ว)</label><input id="pay-iv-paid" placeholder="IV-2569-045"></div>
-        <div><label>เลข IV (ออกบิล ยังไม่ชำระ)</label><input id="pay-iv-unpaid" placeholder="IV-2569-089"></div>
+        <div class="metric" style="background: #fff4e6; border-left: 4px solid #c07000;">
+          <div class="metric-label" style="color: #c07000;">จ่ายบางส่วน</div>
+          <div class="metric-value" id="partial-total" style="color: #c07000;">0.00</div>
+          <div class="dim" style="font-size: 11px; margin-top: 4px;"><span id="partial-count">0</span> รายการ</div>
+        </div>
+        <div class="metric" style="background: var(--success-bg); border-left: 4px solid var(--success);">
+          <div class="metric-label" style="color: var(--success);">ชำระแล้ว</div>
+          <div class="metric-value" id="paid-total" style="color: var(--success);">0.00</div>
+          <div class="dim" style="font-size: 11px; margin-top: 4px;"><span id="paid-count">0</span> รายการ</div>
+        </div>
       </div>
-      <div class="actions"><button onclick="addPayment()" class="small-btn">+ เพิ่มรายการชำระ</button></div>
-      <table id="payments-tbl" style="margin-top: 12px;">
-        <thead><tr><th>ประเภท</th><th class="num">ยอด</th><th>IV ชำระแล้ว</th><th>IV ออกบิลยังไม่ชำระ</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
+
+      <div id="pay-form-wrap" style="padding: 14px; background: var(--accent-light); border-radius: var(--radius); margin-bottom: 16px;">
+        <div style="font-weight: 600; margin-bottom: 8px; color: var(--accent-dark);">เพิ่มรายการใบแจ้งหนี้ใหม่</div>
+        <div class="grid-4">
+          <div><label>ประเภท</label>
+            <select id="pay-type">
+              <option value="deposit">มัดจำ</option>
+              <option value="advance">ล่วงหน้า</option>
+              <option value="installment">ชำระรายงวด</option>
+              <option value="service_package">ค่าบริการรวม</option>
+            </select>
+          </div>
+          <div><label>ยอดเงิน (ก่อน VAT)</label><input id="pay-amount" type="number"></div>
+          <div><label>เลข IV/BL ที่ออกบิล *</label><input id="pay-billed-ref" placeholder="BL2569-018"></div>
+          <div><label>หมายเหตุ</label><input id="pay-note" placeholder="เช่น ชำระเมื่อสั่งจ้าง"></div>
+        </div>
+        <div class="actions"><button onclick="addPayment()" class="small-btn">+ เพิ่มรายการใบแจ้งหนี้</button></div>
+      </div>
+
+      <div id="pending-group" style="margin-bottom: 20px;"></div>
+      <div id="partial-group" style="margin-bottom: 20px;"></div>
+      <div id="paid-group"></div>
     </div>
 
-    <div class="card">
-      <h3>สรุปหักกลบ</h3>
-      <table>
-        <tr><td>รวมค่าบริการ (ไม่นับฟรี)</td><td class="num" id="sum-services">-</td></tr>
-        <tr><td>รวมค่าเช่าทุกรอบ (หลังหักวันที่เครื่องเสีย)</td><td class="num" id="sum-rental">-</td></tr>
-        <tr><td>รวม OT ทุกรอบ</td><td class="num" id="sum-ot">-</td></tr>
-        <tr><td>ปรับปรุงอื่นๆ (หักค่าเสียหาย + เพิ่มค่าอื่น)</td><td class="num" id="sum-adj">-</td></tr>
-        <tr class="sum-row"><td>รวมฝั่งหนี้</td><td class="num" id="sum-debt">-</td></tr>
-        <tr><td>ชำระแล้ว</td><td class="num" id="sum-paid">-</td></tr>
-        <tr><td>ออกบิลแล้ว ยังไม่ชำระ</td><td class="num" id="sum-unpaid">-</td></tr>
-        <tr class="sum-row"><td>รวมฝั่งชำระ/ออกบิล</td><td class="num" id="sum-settled">-</td></tr>
-        <tr class="sum-row" style="background: var(--warning-bg);"><td><strong>ยอดหักกลบ</strong></td><td class="num" id="sum-balance">-</td></tr>
+    <div id="inst-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: white; border-radius: var(--radius-lg); padding: 24px; max-width: 480px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h3 style="margin: 0 0 4px; color: var(--accent-dark);">บันทึกการรับชำระเงิน</h3>
+        <div id="inst-modal-info" class="dim" style="font-size: 13px; margin-bottom: 16px;"></div>
+        <div style="margin-bottom: 12px;">
+          <label>ยอดที่ได้รับชำระ (บาท) *</label>
+          <input id="inst-amount" type="number" step="0.01" style="width: 100%;">
+          <div class="help" id="inst-remaining-hint"></div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label>เลข IV/ใบเสร็จรับเงิน</label>
+          <input id="inst-ref" placeholder="RC2569-xxx" style="width: 100%;">
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label>วันที่รับชำระ *</label>
+          <input id="inst-date" type="date" style="width: 100%;">
+        </div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button onclick="closeInstallmentModal()" class="secondary small-btn">ยกเลิก</button>
+          <button onclick="saveInstallment()" class="small-btn">บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-left: 3px solid var(--accent);">
+      <h3>สรุปยอดคงค้าง</h3>
+      <div id="cn-eligibility-wrap" class="alert info" style="margin-bottom: 12px;"></div>
+      <table id="closure-summary-tbl" style="max-width: 600px; margin-left: auto;">
+        <tr><td style="text-align: right;">ยอดเงินชำระแล้ว</td><td class="num" id="sum-paid" style="width: 150px;">-</td></tr>
+        <tr><td style="text-align: right;">ยอดเงินค้างยังไม่ชำระ</td><td class="num" id="sum-unpaid">-</td></tr>
+        <tr id="cn-row" style="display: none;"><td style="text-align: right;">เครดิตยอดเงินมัดจำ+ล่วงหน้า (CN)</td><td class="num" id="sum-cn">-</td></tr>
+        <tr class="sum-row"><td style="text-align: right;"><strong>คงค้างยอดต้องชำระ (ก่อน VAT)</strong></td><td class="num" id="sum-subtotal">-</td></tr>
+        <tr><td style="text-align: right;">ภาษีมูลค่าเพิ่ม 7%</td><td class="num" id="sum-vat">-</td></tr>
+        <tr class="sum-row" style="background: var(--warning-bg);"><td style="text-align: right;"><strong>รวมต้องชำระทั้งหมด</strong></td><td class="num" id="sum-grand">-</td></tr>
+        <tr><td colspan="2" style="text-align: right; font-style: italic; padding: 8px; color: var(--accent-dark);" id="sum-thai-words"></td></tr>
       </table>
       <div id="balance-label" class="alert" style="margin-top: 10px;"></div>
-      <div class="actions">
-        <button onclick="confirmClose()" class="danger">ยืนยันปิดสัญญา (เปลี่ยนเป็น CLOSED + รื้อเครื่องกลับคลัง)</button>
+
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--border);">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+          <div style="text-align: center;">
+            <div style="border-bottom: 1px solid var(--text); height: 48px; margin-bottom: 6px;"></div>
+            <div style="font-size: 13px; font-weight: 500;">(...........................................)</div>
+            <div style="font-size: 13px; margin-top: 4px;">ผู้ออกเอกสาร</div>
+            <div class="dim" style="font-size: 11px; margin-top: 2px;">วันที่ ................/................/................</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="border-bottom: 1px solid var(--text); height: 48px; margin-bottom: 6px;"></div>
+            <div style="font-size: 13px; font-weight: 500;">(...........................................)</div>
+            <div style="font-size: 13px; margin-top: 4px;">ผู้อนุมัติ</div>
+            <div class="dim" style="font-size: 11px; margin-top: 2px;">วันที่ ................/................/................</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="border-bottom: 1px solid var(--text); height: 48px; margin-bottom: 6px;"></div>
+            <div style="font-size: 13px; font-weight: 500;">(...........................................)</div>
+            <div style="font-size: 13px; margin-top: 4px;">ผู้รับเอกสาร (ลูกค้า)</div>
+            <div class="dim" style="font-size: 11px; margin-top: 2px;">วันที่ ................/................/................</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions no-print" style="margin-top: 20px;">
+        <button onclick="confirmClose()" class="danger">ยืนยันปิดสัญญา + รื้อเครื่องกลับคลัง</button>
       </div>
     </div>
   </div>
@@ -571,7 +686,54 @@ tr:hover td { background: #fcfbf7; }
 
 </div>
 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, update, remove, child }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAI1BpoAoqd3DoQDVc_bcstok42EGsGqjU",
+  authDomain: "sunjurentalsystem.firebaseapp.com",
+  databaseURL: "https://sunjurentalsystem-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sunjurentalsystem",
+  storageBucket: "sunjurentalsystem.firebasestorage.app",
+  messagingSenderId: "324813087832",
+  appId: "1:324813087832:web:2979a055c70c5440ad562d",
+  measurementId: "G-FB8VG4894D"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.__firebase = { db, ref, set, get, onValue, update, remove, child };
+window.__firebaseReady = true;
+console.log("Firebase initialized — DB:", firebaseConfig.databaseURL);
+</script>
+
 <script>
+let currentRole = 'regular';
+
+function toggleRole() {
+  currentRole = currentRole === 'regular' ? 'super_user' : 'regular';
+  const icon = document.getElementById('role-icon');
+  const label = document.getElementById('role-label');
+  const box = document.getElementById('role-switch');
+  if (currentRole === 'super_user') {
+    icon.textContent = '🔓';
+    label.textContent = 'Super user';
+    box.style.background = 'rgba(255,200,80,0.3)';
+  } else {
+    icon.textContent = '👤';
+    label.textContent = 'Regular user';
+    box.style.background = 'rgba(255,255,255,0.1)';
+  }
+  refreshAll();
+  if (document.getElementById('close-contract') && document.getElementById('close-contract').value) loadClosure();
+  if (document.getElementById('ord-contract') && document.getElementById('ord-contract').value) renderOrderPreview();
+}
+
+function isSuperUser() { return currentRole === 'super_user'; }
+
 const DB = {
   customers: [],
   sites: [],
@@ -608,11 +770,32 @@ const MACHINE_TYPES = {
   passenger_hoist: 'ลิฟท์โดยสารก่อสร้าง'
 };
 
+const MACHINE_SUBTYPES = {
+  tower_crane: [
+    { value: 'luffing_jib', label: 'Luffing jib' },
+    { value: 'topkit', label: 'Topkit' },
+    { value: 'topless', label: 'Topless' }
+  ],
+  derrick_crane: [
+    { value: '360', label: '360 องศา' },
+    { value: '270', label: '270 องศา' }
+  ],
+  passenger_hoist: [
+    { value: 'single', label: 'ตู้เดี่ยว' },
+    { value: 'double', label: 'ตู้คู่' }
+  ]
+};
+
+function getSubtypeLabel(type, subtype) {
+  const list = MACHINE_SUBTYPES[type] || [];
+  const found = list.find(s => s.value === subtype);
+  return found ? found.label : '';
+}
+
 const STATUS_LABELS = {
-  reserved: 'จอง',
   rented: 'เช่าอยู่',
   in_storage: 'เก็บกอง',
-  maintenance: 'ซ่อม'
+  pending_repair: 'ตรวจสอบรอซ่อมแซม'
 };
 
 const fmt = n => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -636,77 +819,81 @@ function endOfCutoff(y, m, cutoff) {
 }
 
 function seedData() {
-  DB.customers.push({ id: nextId('customer'), name: 'บริษัท ก่อสร้างทวีทรัพย์ จำกัด', tax_id: '0105556123456', contact_person: 'คุณสมชาย ใจดี', contact_phone: '02-123-4567', address: '123 ถ.พระราม 4 คลองตัน กรุงเทพ 10110' });
-  DB.customers.push({ id: nextId('customer'), name: 'บริษัท พี.เอ็น. พร็อพเพอร์ตี้ จำกัด', tax_id: '0105559887766', contact_person: 'คุณพจน์ ศรีสวัสดิ์', contact_phone: '02-987-6543', address: '456 ถ.รัชดาภิเษก ดินแดง กรุงเทพ 10400' });
+  DB.customers.push({ id: nextId('customer'), name: 'บริษัท ก่อสร้างทวีทรัพย์ จำกัด', tax_id: '0105556123456', contact_person: 'คุณสมชาย ใจดี', contact_phone: '02-123-4567', address: '123 ถ.พระราม 4 คลองตัน กรุงเทพ 10110', tier: 'standard' });
+  DB.customers.push({ id: nextId('customer'), name: 'บริษัท พี.เอ็น. พร็อพเพอร์ตี้ จำกัด', tax_id: '0105559887766', contact_person: 'คุณพจน์ ศรีสวัสดิ์', contact_phone: '02-987-6543', address: '456 ถ.รัชดาภิเษก ดินแดง กรุงเทพ 10400', tier: 'premium' });
 
-  DB.sites.push({ id: nextId('site'), customer_id: 1, site_name: 'โครงการคอนโด ABC พระราม 9', billing_rule: 'monthly_cutoff', cutoff_day: 30, address: 'ถ.พระราม 9 ห้วยขวาง กรุงเทพ' });
+  DB.sites.push({ id: nextId('site'), customer_id: 1, site_name: 'หน่วยงาน A ถนนสาทร', billing_rule: 'monthly_cutoff', cutoff_day: 31, address: 'ถ.สาทร สาทร กรุงเทพ' });
   DB.sites.push({ id: nextId('site'), customer_id: 1, site_name: 'โครงการ XYZ บางนา', billing_rule: 'install_based', cutoff_day: null, address: 'ถ.บางนา-ตราด กม.5' });
   DB.sites.push({ id: nextId('site'), customer_id: 2, site_name: 'โครงการ PN Tower รัชดา', billing_rule: 'monthly_cutoff', cutoff_day: 25, address: 'ถ.รัชดาภิเษก' });
 
+  DB.brands.push({ id: nextId('brand'), name: 'GJJ' });
   DB.brands.push({ id: nextId('brand'), name: 'CREDO' });
   DB.brands.push({ id: nextId('brand'), name: 'Zoomlion' });
-  DB.brands.push({ id: nextId('brand'), name: 'Potain' });
 
-  DB.models.push({ id: nextId('model'), brand_id: 1, type: 'tower_crane', model_name: 'TC6515' });
-  DB.models.push({ id: nextId('model'), brand_id: 2, type: 'passenger_hoist', model_name: 'SC200' });
-  DB.models.push({ id: nextId('model'), brand_id: 3, type: 'tower_crane', model_name: 'MC85B' });
-  DB.models.push({ id: nextId('model'), brand_id: 1, type: 'derrick_crane', model_name: 'DC25' });
+  DB.models.push({ id: nextId('model'), brand_id: 1, type: 'tower_crane', subtype: 'topkit', model_name: 'JWY6024-8(1.6)' });
+  DB.models.push({ id: nextId('model'), brand_id: 2, type: 'tower_crane', subtype: 'topkit', model_name: 'TC6515' });
+  DB.models.push({ id: nextId('model'), brand_id: 3, type: 'passenger_hoist', subtype: 'double', model_name: 'SC200' });
+  DB.models.push({ id: nextId('model'), brand_id: 2, type: 'derrick_crane', subtype: '360', model_name: 'DC25' });
 
-  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-199', model_id: 1, current_status: 'rented', current_warehouse_id: null, current_site_id: 1 });
-  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-201', model_id: 1, current_status: 'in_storage', current_warehouse_id: 2 });
-  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-H08', model_id: 2, current_status: 'rented', current_warehouse_id: null, current_site_id: 3 });
-  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-205', model_id: 3, current_status: 'in_storage', current_warehouse_id: 1 });
-  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-D12', model_id: 4, current_status: 'maintenance', current_warehouse_id: 1 });
+  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-191', model_id: 1, current_status: 'rented', current_warehouse_id: null, current_site_id: 1 });
+  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-199', model_id: 2, current_status: 'in_storage', current_warehouse_id: 1 });
+  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-201', model_id: 2, current_status: 'in_storage', current_warehouse_id: 2 });
+  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-H08', model_id: 3, current_status: 'rented', current_warehouse_id: null, current_site_id: 3 });
+  DB.machines.push({ id: nextId('machine'), machine_code: 'SJ-D12', model_id: 4, current_status: 'pending_repair', current_warehouse_id: 1 });
 
-  // Contract #1: SJ-199 → site #1 (monthly_cutoff 30) ติดตั้ง 9/3/2569 มีรอบค่าเช่า 2 รอบแล้ว
   DB.contracts.push({
     id: nextId('contract'), site_id: 1, machine_id: 1,
-    mode: 'bare', rate_monthly: 150000, rate_daily: 5000, rate_ot_hourly: 500,
-    install_date: '2026-03-09', start_date: '2026-03-09', end_date: null,
-    status: 'active', por_jor_1_policy: 'free_first'
+    mode: 'with_operator', rate_monthly: 100000, rate_daily: 4000, rate_ot_hourly: 250,
+    install_date: '2026-02-15', start_date: '2026-02-16', end_date: null,
+    status: 'active', por_jor_1_policy: 'free_first',
+    site_nickname: 'TC7',
+    deposit_months: 1, deposit_amount: 100000,
+    advance_months: 1, advance_amount: 100000,
+    min_rental_months: 2, exclude_holidays: true
   });
+  DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'foundation_design', amount: 30000 });
   DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'foundation', amount: 80000 });
-  DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'transport_in_install', amount: 120000 });
+  DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'transport_in_install', amount: 180000 });
+  DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'transport_out_dismantle', amount: 180000 });
   DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'por_jor_1', amount: 15000 });
+  DB.services.push({ id: nextId('service'), contract_id: 1, service_type: 'install_test', amount: 70000 });
 
-  DB.cycles.push({
-    id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-001',
-    cycle_number: 1, cycle_type: 'partial_daily',
-    period_from: '2026-03-09', period_to: '2026-03-30',
-    rental_amount: 110000, alert_date: '2026-03-31'
-  });
-  DB.cycles.push({
-    id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-015',
-    cycle_number: 2, cycle_type: 'full_month',
-    period_from: '2026-03-31', period_to: '2026-04-30',
-    rental_amount: 150000, alert_date: '2026-05-01'
-  });
+  DB.cycles.push({ id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-001', cycle_number: 1, cycle_type: 'partial_daily', period_from: '2026-02-16', period_to: '2026-02-28', rental_amount: 50000, alert_date: '2026-03-01' });
+  DB.cycles.push({ id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-015', cycle_number: 2, cycle_type: 'full_month', period_from: '2026-03-01', period_to: '2026-03-31', rental_amount: 100000, alert_date: '2026-04-01' });
+  DB.cycles.push({ id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-032', cycle_number: 3, cycle_type: 'full_month', period_from: '2026-04-01', period_to: '2026-04-30', rental_amount: 100000, alert_date: '2026-05-01' });
+  DB.cycles.push({ id: nextId('cycle'), contract_id: 1, service_sheet_no: 'SS-2569-048', cycle_number: 4, cycle_type: 'partial_daily', period_from: '2026-05-01', period_to: '2026-05-05', rental_amount: 15000, alert_date: '2026-05-06' });
 
-  // OT — รอบ 1 แนบ cycle 1, รอบ 2 แนบ cycle 2, รอบ 3 ปล่อยลอย
-  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: 1, period_from: '2026-03-10', period_to: '2026-03-30', hours: 12, amount: 6000 });
-  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: 2, period_from: '2026-04-01', period_to: '2026-04-30', hours: 20, amount: 10000 });
-  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: null, period_from: '2026-04-15', period_to: '2026-04-18', hours: 8, amount: 4000 });
+  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: 1, period_from: '2026-02-16', period_to: '2026-02-28', hours: 16, amount: 4000 });
+  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: null, period_from: '2026-03-15', period_to: '2026-03-31', hours: 96, amount: 24000 });
+  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: 3, period_from: '2026-04-01', period_to: '2026-04-30', hours: 19.2, amount: 4800 });
+  DB.ots.push({ id: nextId('ot'), contract_id: 1, attach_cycle_id: 4, period_from: '2026-05-01', period_to: '2026-05-05', hours: 4.8, amount: 1200 });
 
-  // Rental Order adjustments: ใบรอบ 2 หักค่าเช่า 3 วัน + หักค่าเสียหาย 8000
-  DB.orderAdjustments['cyc-2'] = {
-    rental_deduction_days: 3,
-    rental_deduction_note: 'เครื่องเสีย 16-18 เม.ย.',
-    extra_lines: [
-      { id: nextId('adj'), label: 'หักค่าความเสียหาย ชนกระจกโครงการ', amount: 8000, is_deduction: true }
-    ]
+  DB.orderAdjustments['cyc-3'] = {
+    rental_deduction_days: 1.875,
+    rental_deduction_note: 'หักค่าคนขับลา',
+    extra_lines: [],
+    remark: ''
   };
 
-  // Payments: มัดจำ + รอบ 1 ชำระแล้ว + รอบ 2 ออกบิลยังไม่ชำระ
-  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'deposit', amount: 150000, paid_date: '2026-03-01', invoice_ref_paid: null, invoice_ref_billed_unpaid: null });
-  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 316000, paid_date: '2026-04-05', invoice_ref_paid: 'IV-2569-045', invoice_ref_billed_unpaid: null, note: 'ค่าบริการเริ่มต้น 200,000 + ค่าเช่ารอบ 1 (110,000) + OT (6,000)' });
-  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 147000, paid_date: null, invoice_ref_paid: null, invoice_ref_billed_unpaid: 'IV-2569-089', note: 'ค่าเช่ารอบ 2 หลังหักเครื่องเสีย 3 วัน + OT 10,000 - ค่าเสียหาย 8,000' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'deposit', amount: 100000, billed_ref: 'BL2569-018', billed_date: '2026-02-08', installments: [{ id: 9001, amount: 100000, paid_ref: 'RC2569-018', paid_date: '2026-02-10' }], note: 'ชำระเมื่อสั่งจ้าง' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'advance', amount: 100000, billed_ref: 'BL2569-019', billed_date: '2026-02-08', installments: [{ id: 9002, amount: 100000, paid_ref: 'RC2569-019', paid_date: '2026-02-10' }], note: 'ชำระเมื่อสั่งจ้าง' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'service_package', amount: 540000, billed_ref: 'BL2569-020', billed_date: '2026-02-08', installments: [{ id: 9003, amount: 540000, paid_ref: 'RC2569-020', paid_date: '2026-02-10' }], note: 'ชำระเมื่อสั่งจ้าง' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 54000, billed_ref: 'IV2569-058', billed_date: '2026-03-01', installments: [{ id: 9004, amount: 54000, paid_ref: 'RC2569-058', paid_date: '2026-03-05' }], note: 'ค่าเช่ารอบ #1 + OT รอบ #1' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 100000, billed_ref: 'IV2569-085', billed_date: '2026-04-01', installments: [], note: 'ค่าเช่ารอบ #2' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 24000, billed_ref: 'IV2569-088', billed_date: '2026-04-01', installments: [], note: 'OT รอบ #2 (15/3-31/3)' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 92500, billed_ref: 'IV2569-091', billed_date: '2026-05-01', installments: [], note: 'ค่าเช่ารอบ #3 หักคนขับลา' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 4800, billed_ref: 'IV2569-092', billed_date: '2026-05-01', installments: [], note: 'OT รอบ #3' });
+  DB.payments.push({ id: nextId('payment'), contract_id: 1, payment_type: 'installment', amount: 16200, billed_ref: 'IV2569-102', billed_date: '2026-05-06', installments: [], note: 'ค่าเช่า+OT รอบปิดงวด' });
 
-  // Contract #2: SJ-H08 → site #3 (PN Tower) ลิฟท์โดยสาร เริ่มเช่า 1/4 ยังไม่มีรอบค่าเช่า (ไว้ให้ลองสร้าง)
   DB.contracts.push({
-    id: nextId('contract'), site_id: 3, machine_id: 3,
+    id: nextId('contract'), site_id: 3, machine_id: 4,
     mode: 'with_operator', rate_monthly: 80000, rate_daily: 2800, rate_ot_hourly: 300,
     install_date: '2026-04-01', start_date: '2026-04-01', end_date: null,
-    status: 'active', por_jor_1_policy: 'charge'
+    status: 'active', por_jor_1_policy: 'free_first',
+    site_nickname: 'Hoist-A',
+    deposit_months: 0, deposit_amount: 0,
+    advance_months: 0, advance_amount: 0,
+    min_rental_months: 0, exclude_holidays: false
   });
   DB.services.push({ id: nextId('service'), contract_id: 2, service_type: 'transport_in', amount: 35000 });
   DB.services.push({ id: nextId('service'), contract_id: 2, service_type: 'install_test', amount: 45000 });
@@ -735,9 +922,11 @@ function addCustomer() {
     tax_id: document.getElementById('cust-tax').value,
     contact_person: document.getElementById('cust-contact').value,
     contact_phone: document.getElementById('cust-phone').value,
-    address: document.getElementById('cust-addr').value
+    address: document.getElementById('cust-addr').value,
+    tier: document.getElementById('cust-tier').value || 'standard'
   });
   ['cust-name','cust-tax','cust-contact','cust-phone','cust-addr'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cust-tier').value = 'standard';
   refreshAll();
 }
 
@@ -760,20 +949,34 @@ function addSite() {
 
 function addBrand() {
   const name = document.getElementById('brand-name').value.trim();
-  if (!name) return;
-  DB.brands.push({ id: nextId('brand'), name });
+  if (!name) { alert('กรอกชื่อแบรนด์'); return; }
+  if (DB.brands.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+    alert('มีแบรนด์นี้อยู่แล้ว'); return;
+  }
+  const note = document.getElementById('brand-note').value.trim();
+  DB.brands.push({ id: nextId('brand'), name, note });
   document.getElementById('brand-name').value = '';
+  document.getElementById('brand-note').value = '';
   refreshAll();
+}
+
+function populateSubtypeOptions() {
+  const type = document.getElementById('model-type').value;
+  const sel = document.getElementById('model-subtype');
+  const subs = MACHINE_SUBTYPES[type] || [];
+  sel.innerHTML = subs.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
 }
 
 function addModel() {
   const brand_id = Number(document.getElementById('model-brand').value);
+  const type = document.getElementById('model-type').value;
+  const subtype = document.getElementById('model-subtype').value;
   const model_name = document.getElementById('model-name').value.trim();
-  if (!brand_id || !model_name) { alert('เลือกแบรนด์และกรอกชื่อรุ่น'); return; }
+  if (!brand_id || !subtype || !model_name) { alert('เลือกแบรนด์ / ลักษณะ และกรอกชื่อรุ่น'); return; }
   if (DB.models.some(m => m.model_name.toLowerCase() === model_name.toLowerCase())) {
     alert('ชื่อรุ่นนี้มีอยู่แล้ว (ห้ามซ้ำข้ามแบรนด์)'); return;
   }
-  DB.models.push({ id: nextId('model'), brand_id, type: document.getElementById('model-type').value, model_name });
+  DB.models.push({ id: nextId('model'), brand_id, type, subtype, model_name });
   document.getElementById('model-name').value = '';
   refreshAll();
 }
@@ -832,6 +1035,17 @@ function populateKSites() {
     o.textContent = s.site_name + ' (' + (s.billing_rule === 'monthly_cutoff' ? 'ตัดรอบวันที่ ' + s.cutoff_day : 'รายเดือนจากวันติดตั้ง') + ')';
     sel.appendChild(o);
   });
+  const cust = DB.customers.find(c => c.id === custId);
+  const isPremium = cust && cust.tier === 'premium';
+  document.getElementById('premium-banner').style.display = isPremium ? '' : 'none';
+  document.getElementById('standard-terms-wrap').style.display = isPremium ? 'none' : '';
+  if (isPremium) {
+    document.getElementById('k-deposit-months').value = 0;
+    document.getElementById('k-deposit-amount').value = 0;
+    document.getElementById('k-advance-months').value = 0;
+    document.getElementById('k-advance-amount').value = 0;
+    document.getElementById('k-min-months').value = 0;
+  }
 }
 
 function createContract() {
@@ -861,7 +1075,14 @@ function createContract() {
     start_date: start,
     end_date: null,
     status: 'active',
-    por_jor_1_policy: porJorPolicy
+    por_jor_1_policy: porJorPolicy,
+    site_nickname: document.getElementById('k-nickname').value.trim(),
+    deposit_months: Number(document.getElementById('k-deposit-months').value) || 0,
+    deposit_amount: Number(document.getElementById('k-deposit-amount').value) || 0,
+    advance_months: Number(document.getElementById('k-advance-months').value) || 0,
+    advance_amount: Number(document.getElementById('k-advance-amount').value) || 0,
+    min_rental_months: Number(document.getElementById('k-min-months').value) || 0,
+    exclude_holidays: document.getElementById('k-exclude-holidays').checked
   };
   DB.contracts.push(contract);
 
@@ -1028,6 +1249,50 @@ function addOT() {
   refreshAll();
 }
 
+const VAT_RATE = 0.07;
+const THAI_DIGITS = ['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'];
+const THAI_PLACES = ['','สิบ','ร้อย','พัน','หมื่น','แสน','ล้าน'];
+
+function numToThaiWords(num) {
+  function readInt(n) {
+    if (n === 0) return '';
+    let s = String(n);
+    let out = '';
+    const len = s.length;
+    for (let i = 0; i < len; i++) {
+      const d = Number(s[i]);
+      const place = len - i - 1;
+      if (d === 0) continue;
+      if (place === 1 && d === 1) out += 'สิบ';
+      else if (place === 1 && d === 2) out += 'ยี่สิบ';
+      else if (place === 0 && d === 1 && len > 1) out += 'เอ็ด';
+      else out += THAI_DIGITS[d] + THAI_PLACES[place];
+    }
+    return out;
+  }
+  function readLarge(n) {
+    if (n <= 999999) return readInt(n);
+    const millions = Math.floor(n / 1000000);
+    const rest = n % 1000000;
+    let result = readLarge(millions) + 'ล้าน';
+    if (rest > 0) result += readInt(rest);
+    return result;
+  }
+  if (isNaN(num)) return '';
+  num = Math.round(num * 100) / 100;
+  const isNegative = num < 0;
+  num = Math.abs(num);
+  const baht = Math.floor(num);
+  const satang = Math.round((num - baht) * 100);
+  let result = '';
+  if (baht === 0 && satang === 0) return 'ศูนย์บาทถ้วน';
+  if (baht > 0) result += readLarge(baht) + 'บาท';
+  if (satang > 0) result += readInt(satang) + 'สตางค์';
+  else if (baht > 0) result += 'ถ้วน';
+  else if (satang === 0) result = 'ศูนย์บาทถ้วน';
+  return (isNegative ? 'ลบ' : '') + result;
+}
+
 function getOrderKey(ord) {
   return ord.type === 'cycle' ? `cyc-${ord.cycle.id}` : `ot-${ord.ots[0].id}`;
 }
@@ -1037,9 +1302,11 @@ function getAdj(key) {
     DB.orderAdjustments[key] = {
       rental_deduction_days: 0,
       rental_deduction_note: '',
-      extra_lines: []
+      extra_lines: [],
+      remark: ''
     };
   }
+  if (!('remark' in DB.orderAdjustments[key])) DB.orderAdjustments[key].remark = '';
   return DB.orderAdjustments[key];
 }
 
@@ -1055,7 +1322,9 @@ function addExtraLine(key) {
   adj.extra_lines.push({
     id: nextId('adj'),
     label: '',
-    amount: 0,
+    qty: 1,
+    unit: '',
+    price_per_unit: 0,
     is_deduction: true
   });
   renderOrderPreview();
@@ -1065,7 +1334,7 @@ function updateExtraLine(key, id, field, value) {
   const adj = getAdj(key);
   const line = adj.extra_lines.find(l => l.id === id);
   if (!line) return;
-  if (field === 'amount') line[field] = Number(value) || 0;
+  if (['qty', 'price_per_unit'].includes(field)) line[field] = Number(value) || 0;
   else if (field === 'is_deduction') line[field] = value === 'true' || value === true;
   else line[field] = value;
   renderOrderPreview();
@@ -1075,6 +1344,11 @@ function removeExtraLine(key, id) {
   const adj = getAdj(key);
   adj.extra_lines = adj.extra_lines.filter(l => l.id !== id);
   renderOrderPreview();
+}
+
+function updateOrderRemark(key, remark) {
+  const adj = getAdj(key);
+  adj.remark = remark;
 }
 
 function renderOrderPreview() {
@@ -1110,8 +1384,13 @@ function renderOrderPreview() {
     const rentalNet = Math.max(0, rentalBase - rentalDeduction);
     const otTotal = ord.ots.reduce((a, o) => a + Number(o.amount), 0);
     let extraSum = 0;
-    adj.extra_lines.forEach(l => { extraSum += l.is_deduction ? -l.amount : l.amount; });
-    const finalTotal = rentalNet + otTotal + extraSum;
+    adj.extra_lines.forEach(l => {
+      const lineTotal = (Number(l.qty) || 0) * (Number(l.price_per_unit) || 0);
+      extraSum += l.is_deduction ? -lineTotal : lineTotal;
+    });
+    const subtotal = rentalNet + otTotal + extraSum;
+    const vat = subtotal * VAT_RATE;
+    const grandTotal = subtotal + vat;
 
     const badge = ord.type === 'cycle' ? '<span class="badge neutral">รอบค่าเช่า + OT แนบ</span>' : '<span class="badge warning">OT ใบแยก</span>';
     const refStr = ord.type === 'cycle' ? (ord.cycle.service_sheet_no || `CYC-${ord.cycle.id}`) : `OT-${ord.ots[0].id}`;
@@ -1160,32 +1439,49 @@ function renderOrderPreview() {
       html += `<tr><td colspan="3" style="padding-top: 8px; border-top: 1px dashed var(--border);" class="dim"><strong>รายการปรับปรุงเพิ่มเติม</strong></td></tr>`;
       adj.extra_lines.forEach(l => {
         const labelEsc = (l.label || '').replace(/"/g, '&quot;');
+        const unitEsc = (l.unit || '').replace(/"/g, '&quot;');
+        const lineTotal = (Number(l.qty) || 0) * (Number(l.price_per_unit) || 0);
         const sign = l.is_deduction ? '-' : '+';
-        const signed = l.is_deduction ? -l.amount : l.amount;
         html += `<tr style="background: #fdf6e8;">
           <td style="padding-left: 20px;">
             <input type="text" placeholder="เช่น หักค่าความเสียหาย" value="${labelEsc}" onchange="updateExtraLine('${key}', ${l.id}, 'label', this.value)" style="width: 100%;">
           </td>
           <td>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <select onchange="updateExtraLine('${key}', ${l.id}, 'is_deduction', this.value)" style="width: 80px;">
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <select onchange="updateExtraLine('${key}', ${l.id}, 'is_deduction', this.value)" style="width: 78px;">
                 <option value="true" ${l.is_deduction ? 'selected' : ''}>หัก (-)</option>
                 <option value="false" ${!l.is_deduction ? 'selected' : ''}>เพิ่ม (+)</option>
               </select>
-              <input type="number" value="${l.amount}" onchange="updateExtraLine('${key}', ${l.id}, 'amount', this.value)" style="width: 100px;">
+              <input type="number" placeholder="จำนวน" value="${l.qty}" onchange="updateExtraLine('${key}', ${l.id}, 'qty', this.value)" style="width: 70px;" step="0.01">
+              <input type="text" placeholder="หน่วย" value="${unitEsc}" onchange="updateExtraLine('${key}', ${l.id}, 'unit', this.value)" style="width: 70px;">
+              <span class="dim" style="font-size: 12px;">×</span>
+              <input type="number" placeholder="ราคา/หน่วย" value="${l.price_per_unit}" onchange="updateExtraLine('${key}', ${l.id}, 'price_per_unit', this.value)" style="width: 100px;" step="0.01">
               <button class="small-btn secondary" onclick="removeExtraLine('${key}', ${l.id})">ลบ</button>
             </div>
           </td>
-          <td class="num">${sign}${fmt(l.amount)}</td>
+          <td class="num">${sign}${fmt(lineTotal)}</td>
         </tr>`;
       });
     }
 
+    const grandTotalRounded = Math.round(grandTotal * 100) / 100;
+    const thaiWords = numToThaiWords(grandTotalRounded);
+    const remarkEsc = (adj.remark || '').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+
     html += `</tbody>
-        <tfoot><tr class="sum-row"><td colspan="2"><strong>ยอดสุทธิส่งบัญชี</strong></td><td class="num"><strong>${fmt(finalTotal)}</strong></td></tr></tfoot>
+        <tfoot>
+          <tr><td colspan="2" style="padding-top: 10px;"><strong>ยอดรวมก่อนภาษี</strong></td><td class="num" style="padding-top: 10px;"><strong>${fmt(subtotal)}</strong></td></tr>
+          <tr><td colspan="2" class="dim">ภาษีมูลค่าเพิ่ม 7%</td><td class="num dim">${fmt(vat)}</td></tr>
+          <tr class="sum-row"><td colspan="2"><strong>ยอดรวมสุทธิ (รวม VAT)</strong></td><td class="num"><strong>${fmt(grandTotal)}</strong></td></tr>
+          <tr><td colspan="3" style="text-align: center; font-style: italic; padding: 8px; background: var(--accent-light); color: var(--accent-dark);">(${thaiWords})</td></tr>
+        </tfoot>
       </table>
-      <div style="margin-top: 10px;">
-        <button class="small-btn secondary" onclick="addExtraLine('${key}')">+ เพิ่มรายการปรับปรุง (หักค่าเสียหาย / เพิ่มค่าอื่นๆ)</button>
+      <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <button class="small-btn secondary" onclick="addExtraLine('${key}')">+ เพิ่มรายการปรับปรุง (พิมพ์รายการ/หน่วย/ราคาเอง)</button>
+      </div>
+      <div style="margin-top: 12px;">
+        <label>หมายเหตุท้ายใบ (แสดงก่อนปริ้นท์)</label>
+        <textarea rows="2" placeholder="เช่น ชำระภายใน 30 วันนับจากวันที่ออกใบกำกับภาษี / กรุณาติดต่อฝ่ายบัญชี 02-xxx-xxxx" onchange="updateOrderRemark('${key}', this.value)" style="width: 100%;">${remarkEsc}</textarea>
       </div>
     </div>`;
   });
@@ -1203,16 +1499,91 @@ function addPayment() {
     contract_id: cid,
     payment_type: document.getElementById('pay-type').value,
     amount,
-    invoice_ref_paid: document.getElementById('pay-iv-paid').value,
-    invoice_ref_billed_unpaid: document.getElementById('pay-iv-unpaid').value,
-    paid_date: document.getElementById('pay-iv-paid').value ? new Date().toISOString().slice(0,10) : null
+    billed_ref: document.getElementById('pay-billed-ref').value,
+    billed_date: document.getElementById('pay-billed-ref').value ? new Date().toISOString().slice(0,10) : null,
+    installments: [],
+    note: document.getElementById('pay-note').value
   });
-  ['pay-amount','pay-iv-paid','pay-iv-unpaid'].forEach(id => document.getElementById(id).value = '');
+  ['pay-amount','pay-billed-ref','pay-note'].forEach(id => document.getElementById(id).value = '');
   loadClosure();
 }
 
 function deletePayment(id) {
+  if (!confirm('ยืนยันลบรายการนี้?')) return;
   DB.payments = DB.payments.filter(p => p.id !== id);
+  loadClosure();
+}
+
+let _pendingInstallmentPaymentId = null;
+
+function openInstallmentDialog(paymentId) {
+  const p = DB.payments.find(x => x.id === paymentId);
+  if (!p) return;
+  _pendingInstallmentPaymentId = paymentId;
+  const paidSum = (p.installments || []).reduce((a, i) => a + Number(i.amount), 0);
+  const remaining = p.amount - paidSum;
+  const typeLabel = { deposit: 'มัดจำ', advance: 'ล่วงหน้า', installment: 'ชำระรายงวด', service_package: 'ค่าบริการรวม' }[p.payment_type] || p.payment_type;
+  document.getElementById('inst-modal-info').innerHTML = `
+    <strong>${typeLabel}</strong> — เลข IV/BL: <strong>${p.billed_ref || '-'}</strong><br>
+    ยอดบิล ${fmt(p.amount)} บาท | จ่ายแล้ว ${fmt(paidSum)} บาท | <span style="color: var(--warning);">คงเหลือ ${fmt(remaining)} บาท</span>
+  `;
+  document.getElementById('inst-amount').value = remaining.toFixed(2);
+  document.getElementById('inst-remaining-hint').textContent = 'ค่าเริ่มต้น = ยอดคงเหลือทั้งหมด (แก้ได้ถ้าจ่ายบางส่วน)';
+  document.getElementById('inst-ref').value = '';
+  document.getElementById('inst-date').value = new Date().toISOString().slice(0,10);
+  const modal = document.getElementById('inst-modal');
+  modal.style.display = 'flex';
+}
+
+function closeInstallmentModal() {
+  document.getElementById('inst-modal').style.display = 'none';
+  _pendingInstallmentPaymentId = null;
+}
+
+function saveInstallment() {
+  if (!_pendingInstallmentPaymentId) return;
+  const p = DB.payments.find(x => x.id === _pendingInstallmentPaymentId);
+  if (!p) return;
+  const amount = Number(document.getElementById('inst-amount').value);
+  const ref = document.getElementById('inst-ref').value.trim();
+  const date = document.getElementById('inst-date').value;
+  if (!amount || amount <= 0) { alert('กรอกยอดที่ได้รับชำระ'); return; }
+  if (!date) { alert('กรอกวันที่รับชำระ'); return; }
+  const paidSum = (p.installments || []).reduce((a, i) => a + Number(i.amount), 0);
+  const remaining = p.amount - paidSum;
+  if (amount > remaining + 0.01) {
+    if (!confirm('ยอดที่บันทึก (' + fmt(amount) + ') เกินยอดคงเหลือ (' + fmt(remaining) + ') ต้องการดำเนินการต่อไหม?')) return;
+  }
+  if (!p.installments) p.installments = [];
+  p.installments.push({ id: nextId('payment'), amount, paid_ref: ref, paid_date: date });
+  closeInstallmentModal();
+  loadClosure();
+}
+
+function deleteInstallment(paymentId, instId) {
+  if (!confirm('ยืนยันลบ installment นี้?')) return;
+  const p = DB.payments.find(x => x.id === paymentId);
+  if (!p) return;
+  p.installments = (p.installments || []).filter(i => i.id !== instId);
+  loadClosure();
+}
+
+function paymentStatus(p) {
+  const paid = (p.installments || []).reduce((a, i) => a + Number(i.amount), 0);
+  if (paid <= 0.01) return { status: 'pending', paid, remaining: p.amount };
+  if (paid + 0.01 >= p.amount) return { status: 'paid', paid, remaining: 0 };
+  return { status: 'partial', paid, remaining: p.amount - paid };
+}
+
+function monthsBetween(startStr, endStr) {
+  if (!startStr || !endStr) return 0;
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+  const ms = end - start;
+  return ms / (1000 * 60 * 60 * 24 * 30.4375);
+}
+
+function toggleCNApply() {
   loadClosure();
 }
 
@@ -1222,31 +1593,51 @@ function loadClosure() {
   document.getElementById('closure-wrap').classList.remove('hidden');
 
   const contract = DB.contracts.find(x => x.id === cid);
+  const machine = DB.machines.find(x => x.id === contract.machine_id);
+  const model = DB.models.find(x => x.id === machine.model_id);
+  const brand = DB.brands.find(x => x.id === model.brand_id);
+  const site = DB.sites.find(x => x.id === contract.site_id);
+  const customer = DB.customers.find(x => x.id === site.customer_id);
   const policy = contract.por_jor_1_policy || 'charge';
-  const policyLabels = { charge: 'คิดเงินทุกครั้ง', free_first: 'ฟรีครั้งแรก', free_all: 'ฟรีตลอดโครงการ' };
-  document.getElementById('por-jor-policy-display').innerHTML =
-    'นโยบาย ปจ.1 ของสัญญา: <strong>' + policyLabels[policy] + '</strong>';
-  const services = DB.services.filter(s => s.contract_id === cid);
-  const svcTbody = document.querySelector('#debt-services-tbl tbody');
-  svcTbody.innerHTML = '';
-  let totalServices = 0;
-  let porJorSeen = 0;
-  services.forEach(s => {
-    let isFree = false, freeReason = '';
-    if (s.service_type === 'por_jor_1') {
-      porJorSeen++;
-      if (policy === 'free_all') { isFree = true; freeReason = 'นโยบายฟรีตลอดโครงการ'; }
-      else if (policy === 'free_first' && porJorSeen === 1) { isFree = true; freeReason = 'นโยบายฟรีครั้งแรก'; }
-    }
-    const eff = isFree ? 0 : s.amount;
-    totalServices += eff;
-    svcTbody.innerHTML += `<tr><td>${SERVICE_LABELS[s.service_type]}</td><td class="num">${fmt(s.amount)}${isFree ? ' <span class="badge warning">ฟรี</span>' : ''}</td><td class="dim">${freeReason}</td></tr>`;
-  });
+  const policyLabels = { charge: 'คิดเงินทุกครั้ง', free_first: 'ฟรีเฉพาะครั้งแรก', free_all: 'ฟรีตลอดโครงการ' };
+  const modeLabel = contract.mode === 'with_operator' ? 'แบบมีคนขับ' : 'แบบเครื่องเปล่า';
 
+  const endDateEl = document.getElementById('close-end-date');
+  const endDate = endDateEl.value || null;
+
+  const isPremium = customer.tier === 'premium';
+  const tierBadge = isPremium ? '<span class="badge success" style="margin-left: 6px;">ลูกค้าชั้นดี Premium</span>' : '';
+
+  document.getElementById('closure-header').innerHTML = `
+    <h3 style="margin-top: 0;">รายการสรุปยอดเงินคงค้างระหว่างกัน${tierBadge}</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+      <div><strong>ลูกค้า:</strong> ${customer.name}</div>
+      <div><strong>เลขผู้เสียภาษี:</strong> ${customer.tax_id || '-'}</div>
+      <div><strong>หน่วยงาน:</strong> ${site.site_name}</div>
+      <div><strong>เครื่องจักร:</strong> ${machine.machine_code}${contract.site_nickname ? ' (Mark: ' + contract.site_nickname + ')' : ''} — ${MACHINE_TYPES[model.type]} ${getSubtypeLabel(model.type, model.subtype)}</div>
+      <div><strong>แบรนด์/รุ่น:</strong> ${brand.name} ${model.model_name}</div>
+      <div><strong>วันเริ่มติดตั้ง:</strong> ${fmtDate(contract.install_date)} &nbsp; <strong>วันเริ่มนับค่าเช่า:</strong> ${fmtDate(contract.start_date)}</div>
+    </div>
+    <div style="margin-top: 10px; padding: 10px 12px; background: var(--accent-light); border-radius: var(--radius); font-size: 13px;">
+      <strong>เงื่อนไขการเช่าเริ่มต้น</strong>
+      <ul style="margin: 6px 0 0; padding-left: 20px;">
+        <li>ค่าเช่า ${modeLabel} รายเดือน ${fmt(contract.rate_monthly)} บาท / OT ${fmt(contract.rate_ot_hourly)} ต่อชั่วโมง (ไม่รวม VAT)</li>
+        <li>ตัดรอบ: ${site.billing_rule === 'monthly_cutoff' ? 'ทุกวันที่ ' + site.cutoff_day + ' ของเดือน' : 'นับจากวันติดตั้ง'} / OT แบบยืดหยุ่น${isPremium ? ' / เศษของวันคิดตามจริง' : ''}</li>
+        ${isPremium
+          ? '<li>ทุกบริการชำระหลังแจ้งหนี้ (ไม่มีมัดจำ / ไม่มีล่วงหน้า / ไม่มีค่าเช่าขั้นต่ำ)</li>'
+          : `<li>ค่ามัดจำเช่า ${contract.deposit_months || 0} เดือน เป็นเงิน ${fmt(contract.deposit_amount)} บาท (ชำระเมื่อสั่งจ้าง)</li>
+             <li>ค่าเช่าล่วงหน้า ${contract.advance_months || 0} เดือน เป็นเงิน ${fmt(contract.advance_amount)} บาท (ชำระเมื่อสั่งจ้าง)</li>
+             <li>ค่าเช่าขั้นต่ำ ${contract.min_rental_months || 0} เดือน</li>`}
+        <li>ปจ.1: ${policyLabels[policy]}</li>
+        ${contract.exclude_holidays ? '<li>ไม่คิดเงินค่าวันหยุดนักขัตฤกษ์เพิ่มเติม</li>' : ''}
+      </ul>
+    </div>
+  `;
+
+  const services = DB.services.filter(s => s.contract_id === cid);
   const cycles = DB.cycles.filter(c => c.contract_id === cid).sort((a,b) => a.cycle_number - b.cycle_number);
-  const cycTbody = document.querySelector('#debt-cycles-tbl tbody');
-  cycTbody.innerHTML = '';
-  let totalRental = 0, totalOT = 0, totalAdjustments = 0;
+  const standaloneOTs = DB.ots.filter(o => o.contract_id === cid && !o.attach_cycle_id);
+  const payments = DB.payments.filter(p => p.contract_id === cid);
   const dailyRate = Number(contract.rate_daily) || 0;
 
   function computeAdjustments(key) {
@@ -1257,66 +1648,246 @@ function loadClosure() {
     const notes = [];
     if (dedAmount > 0) notes.push('หักค่าเช่า ' + adj.rental_deduction_days + ' วัน' + (adj.rental_deduction_note ? ' (' + adj.rental_deduction_note + ')' : ''));
     adj.extra_lines.forEach(l => {
-      const signed = l.is_deduction ? -l.amount : l.amount;
-      extraSum += signed;
-      if (l.amount !== 0) notes.push((l.is_deduction ? 'หัก' : 'เพิ่ม') + ': ' + (l.label || '(ไม่ระบุ)') + ' ' + fmt(l.amount));
+      const lineTotal = (Number(l.qty) || 0) * (Number(l.price_per_unit) || 0);
+      extraSum += l.is_deduction ? -lineTotal : lineTotal;
+      if (lineTotal !== 0) {
+        const qtyStr = l.qty + (l.unit ? ' ' + l.unit : '');
+        notes.push((l.is_deduction ? 'หัก' : 'เพิ่ม') + ': ' + (l.label || '(ไม่ระบุ)') + ' ' + qtyStr + ' × ' + fmt(l.price_per_unit));
+      }
     });
     return { dedAmount, extraSum, notes };
   }
 
+  const itemTbody = document.querySelector('#closure-items-tbl tbody');
+  itemTbody.innerHTML = '';
+  let seq = 0;
+  const paymentIndex = new Map();
+  payments.forEach(p => paymentIndex.set(p.id, p));
+
+  function findMatchingPayment(amount, type) {
+    for (const p of payments) {
+      if (p._used) continue;
+      if (Math.abs(p.amount - amount) < 1 && (!type || p.payment_type === type)) {
+        p._used = true;
+        return p;
+      }
+    }
+    return null;
+  }
+
+  function addItemRow(label, amount, period, matchType) {
+    seq++;
+    const match = findMatchingPayment(amount, matchType);
+    let paidRef = '', unpaidRef = '';
+    if (match) {
+      const st = paymentStatus(match);
+      const billedRef = match.billed_ref || '';
+      if (st.status === 'paid') {
+        const lastInst = (match.installments || []).slice(-1)[0];
+        paidRef = (lastInst && lastInst.paid_ref) || billedRef;
+      } else if (st.status === 'partial') {
+        paidRef = (match.installments || []).map(i => i.paid_ref).filter(Boolean).join(', ');
+        unpaidRef = billedRef;
+      } else {
+        unpaidRef = billedRef;
+      }
+    }
+    const noteCell = match && match.note ? match.note : period;
+    itemTbody.innerHTML += `<tr>
+      <td class="num">${seq}</td>
+      <td>${label}</td>
+      <td>${paidRef || '<span class="dim">-</span>'}</td>
+      <td>${unpaidRef || '<span class="dim">-</span>'}</td>
+      <td class="num">${fmt(amount)}</td>
+      <td class="dim" style="font-size: 11px;">${noteCell}</td>
+    </tr>`;
+  }
+
+  payments.forEach(p => p._used = false);
+
+  if (contract.deposit_amount > 0) addItemRow('ค่ามัดจำเช่าสินค้า', contract.deposit_amount, 'ชำระเมื่อสั่งจ้าง', 'deposit');
+  if (contract.advance_amount > 0) addItemRow('ค่าเช่าล่วงหน้า', contract.advance_amount, 'ชำระเมื่อสั่งจ้าง', 'advance');
+
+  let totalServices = 0;
+  let porJorSeen = 0;
+  services.forEach(s => {
+    let isFree = false;
+    if (s.service_type === 'por_jor_1') {
+      porJorSeen++;
+      if (policy === 'free_all') isFree = true;
+      else if (policy === 'free_first' && porJorSeen === 1) isFree = true;
+    }
+    if (!isFree) totalServices += s.amount;
+  });
+  if (totalServices > 0) addItemRow('ค่าบริการรวม (3.1-3.8 ไม่นับฟรี)', totalServices, 'ชำระเมื่อสั่งจ้าง', 'service_package');
+
+  let totalRental = 0, totalOT = 0;
   cycles.forEach(c => {
     const otSum = DB.ots.filter(o => o.attach_cycle_id === c.id).reduce((a, o) => a + Number(o.amount), 0);
     const key = `cyc-${c.id}`;
-    const { dedAmount, extraSum, notes } = computeAdjustments(key);
-    const rentalNet = Math.max(0, c.rental_amount - dedAmount);
-    const lineTotal = rentalNet + otSum + extraSum;
+    const { dedAmount, extraSum } = computeAdjustments(key);
+    const rentalNet = Math.max(0, c.rental_amount - dedAmount) + extraSum;
+    const periodStr = fmtDate(c.period_from) + '-' + fmtDate(c.period_to);
+    const hasDeduction = dedAmount > 0;
+    const labelSuffix = hasDeduction ? ' (มีหักค่าเช่า)' : '';
+    addItemRow('ค่าเช่ารอบที่ #' + c.cycle_number + labelSuffix, rentalNet, periodStr);
     totalRental += rentalNet;
-    totalOT += otSum;
-    totalAdjustments += extraSum;
-    const noteHtml = notes.length ? '<div class="dim" style="font-size: 11px; margin-top: 2px;">' + notes.join(' | ') + '</div>' : '';
-    cycTbody.innerHTML += `<tr><td>#${c.cycle_number}${noteHtml}</td><td>${c.service_sheet_no || '-'}</td><td class="dim">${fmtDate(c.period_from)} → ${fmtDate(c.period_to)}</td><td class="num">${fmt(rentalNet)}${dedAmount > 0 ? '<div class="dim" style="font-size: 11px;">หลังหัก (เดิม ' + fmt(c.rental_amount) + ')</div>' : ''}</td><td class="num">${fmt(otSum)}</td><td class="num">${fmt(lineTotal)}</td></tr>`;
+    if (otSum > 0) {
+      addItemRow('OT รอบที่ #' + c.cycle_number, otSum, periodStr);
+      totalOT += otSum;
+    }
   });
-  const standaloneOTs = DB.ots.filter(o => o.contract_id === cid && !o.attach_cycle_id);
   standaloneOTs.forEach(o => {
-    const key = `ot-${o.id}`;
-    const { extraSum, notes } = computeAdjustments(key);
-    const lineTotal = Number(o.amount) + extraSum;
+    const periodStr = fmtDate(o.period_from) + '-' + fmtDate(o.period_to);
+    addItemRow('OT (ใบแยก)', Number(o.amount), periodStr);
     totalOT += Number(o.amount);
-    totalAdjustments += extraSum;
-    const noteHtml = notes.length ? '<div class="dim" style="font-size: 11px; margin-top: 2px;">' + notes.join(' | ') + '</div>' : '';
-    cycTbody.innerHTML += `<tr><td><span class="badge warning">OT ลอย</span>${noteHtml}</td><td>OT-${o.id}</td><td class="dim">${fmtDate(o.period_from)} → ${fmtDate(o.period_to)}</td><td class="num">-</td><td class="num">${fmt(o.amount)}</td><td class="num">${fmt(lineTotal)}</td></tr>`;
   });
 
-  const payments = DB.payments.filter(p => p.contract_id === cid);
-  const payTbody = document.querySelector('#payments-tbl tbody');
-  payTbody.innerHTML = '';
-  let totalPaid = 0, totalUnpaid = 0;
-  const typeLabels = { deposit: 'มัดจำ', advance: 'ล่วงหน้า', installment: 'ชำระรายงวด' };
+  if (endDate) {
+    itemTbody.innerHTML += `<tr style="background: var(--accent-light);"><td colspan="6" style="font-weight: 600; color: var(--accent-dark);">ยุติสัญญาเช่า ในวันที่ ${fmtDate(endDate)} ดังนี้</td></tr>`;
+  }
+
   payments.forEach(p => {
-    const isPaid = p.invoice_ref_paid || ((p.payment_type === 'deposit' || p.payment_type === 'advance') && p.paid_date);
-    if (isPaid) totalPaid += p.amount;
-    else if (p.invoice_ref_billed_unpaid) totalUnpaid += p.amount;
-    payTbody.innerHTML += `<tr><td>${typeLabels[p.payment_type]}</td><td class="num">${fmt(p.amount)}</td><td>${p.invoice_ref_paid || '-'}</td><td>${p.invoice_ref_billed_unpaid || '-'}</td><td><button class="small-btn secondary" onclick="deletePayment(${p.id})">ลบ</button></td></tr>`;
+    if (p._used) return;
+    const typeLabel = { deposit: 'มัดจำ', advance: 'ล่วงหน้า', installment: 'ชำระรายงวด', service_package: 'ค่าบริการรวม' }[p.payment_type] || p.payment_type;
+    addItemRow(typeLabel + ' (ยังไม่ได้ map)', p.amount, p.note || '-');
   });
 
-  const totalDebt = totalServices + totalRental + totalOT + totalAdjustments;
-  const totalSettled = totalPaid + totalUnpaid;
-  const balance = totalDebt - totalSettled;
+  let totalPaid = 0, totalUnpaid = 0;
+  const typeLabels = { deposit: 'มัดจำ', advance: 'ล่วงหน้า', installment: 'ชำระรายงวด', service_package: 'ค่าบริการรวม' };
 
-  document.getElementById('sum-services').textContent = fmt(totalServices);
-  document.getElementById('sum-rental').textContent = fmt(totalRental);
-  document.getElementById('sum-ot').textContent = fmt(totalOT);
-  const sumAdjEl = document.getElementById('sum-adj');
-  if (sumAdjEl) sumAdjEl.textContent = (totalAdjustments >= 0 ? '+' : '') + fmt(totalAdjustments);
-  document.getElementById('sum-debt').textContent = fmt(totalDebt);
+  const groups = { pending: [], partial: [], paid: [] };
+  const groupTotals = { pending: 0, partial: 0, paid: 0 };
+  payments.forEach(p => {
+    const st = paymentStatus(p);
+    totalPaid += st.paid;
+    totalUnpaid += st.remaining;
+    groups[st.status].push({ p, st });
+    groupTotals[st.status] += (st.status === 'paid' ? st.paid : p.amount);
+  });
+
+  document.getElementById('pending-total').textContent = fmt(groupTotals.pending);
+  document.getElementById('pending-count').textContent = groups.pending.length;
+  document.getElementById('partial-total').textContent = fmt(groupTotals.partial);
+  document.getElementById('partial-count').textContent = groups.partial.length;
+  document.getElementById('paid-total').textContent = fmt(groupTotals.paid);
+  document.getElementById('paid-count').textContent = groups.paid.length;
+
+  function renderInstallmentList(p) {
+    if (!p.installments || p.installments.length === 0) return '';
+    return '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 12px;">' +
+      '<div class="dim" style="margin-bottom: 4px;">รายละเอียดการชำระ:</div>' +
+      p.installments.map(i => `<div style="padding: 4px 8px; background: var(--success-bg); border-radius: 4px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center;">
+        <span><span style="color: var(--success); font-weight: 500;">✓</span> ${fmtDate(i.paid_date)} • ${i.paid_ref ? '<strong>' + i.paid_ref + '</strong>' : '<span class="dim">(ไม่มีเลข IV)</span>'} • ${fmt(i.amount)} บาท</span>
+        <button class="small-btn secondary" style="padding: 0px 6px; font-size: 10px;" onclick="deleteInstallment(${p.id}, ${i.id})">×</button>
+      </div>`).join('') + '</div>';
+  }
+
+  function renderPaymentCard(p, st, bgColor, borderColor, statusBadge) {
+    const instHtml = renderInstallmentList(p);
+    const actions = st.status !== 'paid'
+      ? `<button class="small-btn" style="font-size: 12px;" onclick="openInstallmentDialog(${p.id})">+ บันทึกรับชำระ</button>`
+      : '';
+    return `<div style="padding: 12px 14px; background: ${bgColor}; border-left: 4px solid ${borderColor}; border-radius: var(--radius); margin-bottom: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
+            <span style="font-weight: 600; color: var(--text);">${typeLabels[p.payment_type] || p.payment_type}</span>
+            ${statusBadge}
+            <span class="dim" style="font-size: 12px;">IV/BL: <strong style="color: var(--text);">${p.billed_ref || '-'}</strong></span>
+            ${p.billed_date ? '<span class="dim" style="font-size: 11px;">ออกบิล: ' + fmtDate(p.billed_date) + '</span>' : ''}
+          </div>
+          ${p.note ? '<div class="dim" style="font-size: 12px; margin-bottom: 4px;">' + p.note + '</div>' : ''}
+          <div style="font-size: 13px;">
+            ยอดบิล <strong>${fmt(p.amount)}</strong>
+            ${st.paid > 0 ? ' • จ่ายแล้ว <strong style="color: var(--success);">' + fmt(st.paid) + '</strong>' : ''}
+            ${st.remaining > 0 ? ' • <span style="color: var(--warning);">คงเหลือ ' + fmt(st.remaining) + '</span>' : ''}
+          </div>
+          ${instHtml}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; white-space: nowrap;">
+          ${actions}
+          <button class="small-btn secondary" style="font-size: 11px;" onclick="deletePayment(${p.id})">ลบรายการ</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const pendingWrap = document.getElementById('pending-group');
+  pendingWrap.innerHTML = groups.pending.length === 0
+    ? ''
+    : `<div style="font-weight: 600; color: var(--warning); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+         <span style="display: inline-block; width: 10px; height: 10px; background: var(--warning); border-radius: 50%;"></span>
+         รอชำระ (${groups.pending.length} รายการ — ${fmt(groupTotals.pending)} บาท)
+       </div>` +
+      groups.pending.map(({p, st}) => renderPaymentCard(p, st, '#fdf6e8', 'var(--warning)', '<span class="badge warning">รอชำระ</span>')).join('');
+
+  const partialWrap = document.getElementById('partial-group');
+  partialWrap.innerHTML = groups.partial.length === 0
+    ? ''
+    : `<div style="font-weight: 600; color: #c07000; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+         <span style="display: inline-block; width: 10px; height: 10px; background: #c07000; border-radius: 50%;"></span>
+         จ่ายบางส่วน (${groups.partial.length} รายการ)
+       </div>` +
+      groups.partial.map(({p, st}) => renderPaymentCard(p, st, '#fff4e6', '#c07000', '<span class="badge warning" style="background: #fff4e6; color: #c07000;">จ่ายบางส่วน</span>')).join('');
+
+  const paidWrap = document.getElementById('paid-group');
+  paidWrap.innerHTML = groups.paid.length === 0
+    ? '<div class="dim" style="padding: 12px; text-align: center; font-size: 13px;">ยังไม่มีรายการที่ชำระเสร็จ</div>'
+    : `<div style="font-weight: 600; color: var(--success); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+         <span style="display: inline-block; width: 10px; height: 10px; background: var(--success); border-radius: 50%;"></span>
+         ชำระเรียบร้อยแล้ว (${groups.paid.length} รายการ — ${fmt(groupTotals.paid)} บาท)
+       </div>` +
+      groups.paid.map(({p, st}) => renderPaymentCard(p, st, 'var(--success-bg)', 'var(--success)', '<span class="badge success">ชำระแล้ว</span>')).join('');
+
+  const rentalMonths = endDate ? monthsBetween(contract.start_date, endDate) : 0;
+  const eligibleCN = !isPremium && rentalMonths >= (contract.min_rental_months || 0) && (contract.deposit_amount + contract.advance_amount) > 0;
+  const cnAmount = contract.deposit_amount + contract.advance_amount;
+
+  const cnWrap = document.getElementById('cn-eligibility-wrap');
+  if (isPremium) {
+    cnWrap.className = 'alert success';
+    cnWrap.innerHTML = '<strong>ลูกค้าชั้นดี Premium</strong> — ไม่มีการหักกลบมัดจำ/ล่วงหน้า ทุกรายการคำนวณเฉพาะ "ชำระแล้ว" กับ "ยังไม่ชำระ" เท่านั้น';
+  } else if (!endDate) {
+    cnWrap.className = 'alert info';
+    cnWrap.innerHTML = 'เลือก <strong>วันยุติสัญญา</strong> ด้านบนเพื่อประเมินสิทธิ์การใช้เครดิตมัดจำ+ล่วงหน้า';
+  } else if (eligibleCN) {
+    const applyEl = document.getElementById('apply-cn-chk');
+    const isChecked = applyEl ? applyEl.checked : true;
+    cnWrap.className = 'alert success';
+    cnWrap.innerHTML = `ระยะเวลาเช่า <strong>${rentalMonths.toFixed(2)} เดือน</strong> ≥ ขั้นต่ำ ${contract.min_rental_months} เดือน
+      → มีสิทธิ์เครดิตมัดจำ+ล่วงหน้า รวม <strong>${fmt(cnAmount)}</strong> บาท<br>
+      <label style="display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;">
+        <input type="checkbox" id="apply-cn-chk" ${isChecked ? 'checked' : ''} onchange="toggleCNApply()">
+        <span>ออก CN หักกลบยอดคงค้าง (ยกเลิกได้ถ้าต้องการให้ลูกค้าจ่ายเต็มและรับเงินมัดจำคืน)</span>
+      </label>`;
+  } else {
+    cnWrap.className = 'alert warning';
+    cnWrap.innerHTML = rentalMonths > 0
+      ? `ระยะเวลาเช่า <strong>${rentalMonths.toFixed(2)} เดือน</strong> &lt; ขั้นต่ำ ${contract.min_rental_months} เดือน → ไม่มีสิทธิ์ออก CN (ริบมัดจำ+ล่วงหน้า)`
+      : 'ยังไม่มีเงินมัดจำ/ล่วงหน้าในสัญญานี้';
+  }
+
+  const applyCN = eligibleCN && (document.getElementById('apply-cn-chk') ? document.getElementById('apply-cn-chk').checked : true);
+  const cnRow = document.getElementById('cn-row');
+  cnRow.style.display = applyCN ? '' : 'none';
+  document.getElementById('sum-cn').textContent = applyCN ? fmt(cnAmount) : '-';
+
+  const subtotalBeforeCN = totalUnpaid;
+  const subtotal = applyCN ? (subtotalBeforeCN - cnAmount) : subtotalBeforeCN;
+  const vat = subtotal * VAT_RATE;
+  const grand = subtotal + vat;
+
   document.getElementById('sum-paid').textContent = fmt(totalPaid);
-  document.getElementById('sum-unpaid').textContent = fmt(totalUnpaid);
-  document.getElementById('sum-settled').textContent = fmt(totalSettled);
-  document.getElementById('sum-balance').textContent = fmt(balance);
+  document.getElementById('sum-unpaid').textContent = '(' + fmt(totalUnpaid) + ')';
+  document.getElementById('sum-subtotal').textContent = subtotal < 0 ? '(' + fmt(Math.abs(subtotal)) + ')' : fmt(subtotal);
+  document.getElementById('sum-vat').textContent = '(' + fmt(Math.abs(vat)) + ')';
+  document.getElementById('sum-grand').textContent = grand < 0 ? '(' + fmt(Math.abs(grand)) + ')' : fmt(grand);
+  document.getElementById('sum-thai-words').textContent = '(' + numToThaiWords(Math.abs(grand)) + ')';
 
   const lbl = document.getElementById('balance-label');
-  if (balance > 0.01) { lbl.className = 'alert danger'; lbl.innerHTML = '<strong>ลูกค้าต้องชำระเพิ่ม ' + fmt(balance) + ' บาท</strong>'; }
-  else if (balance < -0.01) { lbl.className = 'alert warning'; lbl.innerHTML = '<strong>บริษัทต้องคืนลูกค้า ' + fmt(-balance) + ' บาท</strong>'; }
+  if (grand > 0.01) { lbl.className = 'alert danger'; lbl.innerHTML = '<strong>ลูกค้าต้องชำระเพิ่ม ' + fmt(grand) + ' บาท (รวม VAT)</strong>'; }
+  else if (grand < -0.01) { lbl.className = 'alert warning'; lbl.innerHTML = '<strong>บริษัทต้องคืนลูกค้า ' + fmt(-grand) + ' บาท (รวม VAT)</strong>'; }
   else { lbl.className = 'alert success'; lbl.innerHTML = '<strong>ปิดงานพอดี — ไม่มียอดคงค้าง</strong>'; }
 }
 
@@ -1356,7 +1927,8 @@ function refreshAll() {
     const v = modelSel.value;
     modelSel.innerHTML = '<option value="">-- เลือก --</option>' + DB.models.map(m => {
       const b = DB.brands.find(x => x.id === m.brand_id);
-      return `<option value="${m.id}">${b.name} ${m.model_name} (${MACHINE_TYPES[m.type]})</option>`;
+      const subLabel = getSubtypeLabel(m.type, m.subtype);
+      return `<option value="${m.id}">${b.name} ${m.model_name} — ${MACHINE_TYPES[m.type]}${subLabel ? ' / ' + subLabel : ''}</option>`;
     }).join('');
     if (v) modelSel.value = v;
   }
@@ -1421,7 +1993,7 @@ function renderDashboard() {
       loc = `${cust.name} / ${s.site_name}`;
     }
     const badgeClass = m.current_status === 'rented' ? 'success' : m.current_status === 'in_storage' ? 'neutral' : 'warning';
-    return `<tr><td><strong>${m.machine_code}</strong></td><td>${MACHINE_TYPES[md.type]}</td><td>${b.name} ${md.model_name}</td><td><span class="badge ${badgeClass}">${STATUS_LABELS[m.current_status]}</span></td><td>${loc}</td></tr>`;
+    return `<tr><td><strong>${m.machine_code}</strong></td><td>${MACHINE_TYPES[md.type]}</td><td class="dim">${getSubtypeLabel(md.type, md.subtype)}</td><td>${b.name} ${md.model_name}</td><td><span class="badge ${badgeClass}">${STATUS_LABELS[m.current_status]}</span></td><td>${loc}</td></tr>`;
   }).join('');
 
   const cTbody = document.querySelector('#active-contracts-tbl tbody');
@@ -1471,7 +2043,7 @@ function renderMachineTbl() {
       const s = DB.sites.find(x => x.id === m.current_site_id);
       loc = s ? s.site_name : '-';
     }
-    return `<tr><td><strong>${m.machine_code}</strong></td><td>${MACHINE_TYPES[md.type]}</td><td>${b.name}</td><td>${md.model_name}</td><td><span class="badge ${m.current_status === 'rented' ? 'success' : 'neutral'}">${STATUS_LABELS[m.current_status]}</span></td><td>${loc}</td></tr>`;
+    return `<tr><td><strong>${m.machine_code}</strong></td><td>${MACHINE_TYPES[md.type]}</td><td class="dim">${getSubtypeLabel(md.type, md.subtype)}</td><td>${b.name}</td><td>${md.model_name}</td><td><span class="badge ${m.current_status === 'rented' ? 'success' : m.current_status === 'pending_repair' ? 'warning' : 'neutral'}">${STATUS_LABELS[m.current_status]}</span></td><td>${loc}</td></tr>`;
   }).join('');
 }
 
@@ -1504,8 +2076,143 @@ function renderCyclesDetail() {
   wrap.innerHTML = `<table><thead><tr><th>รอบ/OT</th><th>Ref</th><th>ช่วง/วัน</th><th>ประเภท</th><th class="num">ค่าเช่า</th><th>OT</th></tr></thead><tbody>${cycleRows}${standaloneRows}</tbody></table>`;
 }
 
-document.getElementById('today-display').textContent = 'วันนี้: ' + new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'long', year: 'numeric' });
-refreshAll();
+let _isSaving = false;
+let _saveDebounce = null;
+let _syncStatus = 'idle';
+
+function setSyncBadge(status, detail) {
+  _syncStatus = status;
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const map = {
+    idle: { text: '● ออฟไลน์', color: '#999' },
+    loading: { text: '⟳ กำลังโหลด...', color: 'var(--warning)' },
+    saving: { text: '⟳ กำลังบันทึก...', color: 'var(--warning)' },
+    synced: { text: '● ซิงค์แล้ว', color: 'var(--success)' },
+    error: { text: '⚠ ข้อผิดพลาด', color: 'var(--danger)' }
+  };
+  const m = map[status] || map.idle;
+  el.textContent = detail ? m.text + ' ' + detail : m.text;
+  el.style.color = m.color;
+}
+
+async function saveToFirebase() {
+  if (!window.__firebaseReady) return;
+  if (_isSaving) return;
+  _isSaving = true;
+  setSyncBadge('saving');
+  try {
+    const { db, ref, set } = window.__firebase;
+    const snapshot = {
+      customers: DB.customers,
+      sites: DB.sites,
+      brands: DB.brands,
+      models: DB.models,
+      machines: DB.machines,
+      warehouses: DB.warehouses,
+      contracts: DB.contracts,
+      services: DB.services,
+      cycles: DB.cycles,
+      ots: DB.ots,
+      payments: DB.payments,
+      orderAdjustments: DB.orderAdjustments,
+      nextId: DB.nextId,
+      _updatedAt: Date.now()
+    };
+    await set(ref(db, 'app_state'), snapshot);
+    setSyncBadge('synced', new Date().toLocaleTimeString('th-TH'));
+  } catch (e) {
+    console.error('Firebase save error:', e);
+    setSyncBadge('error', e.message);
+  } finally {
+    _isSaving = false;
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(_saveDebounce);
+  _saveDebounce = setTimeout(saveToFirebase, 600);
+}
+
+async function loadFromFirebase() {
+  if (!window.__firebaseReady) return false;
+  setSyncBadge('loading');
+  try {
+    const { db, ref, get } = window.__firebase;
+    const snap = await get(ref(db, 'app_state'));
+    if (!snap.exists()) {
+      setSyncBadge('synced', '(DB ว่าง)');
+      return false;
+    }
+    const data = snap.val();
+    if (data.customers) DB.customers = data.customers;
+    if (data.sites) DB.sites = data.sites;
+    if (data.brands) DB.brands = data.brands;
+    if (data.models) DB.models = data.models;
+    if (data.machines) DB.machines = data.machines;
+    if (data.warehouses) DB.warehouses = data.warehouses;
+    if (data.contracts) DB.contracts = data.contracts;
+    if (data.services) DB.services = data.services;
+    if (data.cycles) DB.cycles = data.cycles;
+    if (data.ots) DB.ots = data.ots;
+    if (data.payments) DB.payments = data.payments;
+    if (data.orderAdjustments) DB.orderAdjustments = data.orderAdjustments;
+    if (data.nextId) DB.nextId = data.nextId;
+    setSyncBadge('synced', new Date().toLocaleTimeString('th-TH'));
+    console.log('Loaded from Firebase, updated:', new Date(data._updatedAt).toLocaleString());
+    return true;
+  } catch (e) {
+    console.error('Firebase load error:', e);
+    setSyncBadge('error', e.message);
+    return false;
+  }
+}
+
+async function resetFirebase() {
+  if (!confirm('ลบข้อมูลทั้งหมดใน Firebase แล้วโหลด seed data ใหม่? (การกระทำนี้ย้อนกลับไม่ได้)')) return;
+  const { db, ref, remove } = window.__firebase;
+  await remove(ref(db, 'app_state'));
+  location.reload();
+}
+
+const _refreshAllOriginal = refreshAll;
+refreshAll = function() {
+  _refreshAllOriginal.apply(this, arguments);
+  if (window.__firebaseReady && !_isLoadingInitial) scheduleSave();
+};
+
+let _isLoadingInitial = true;
+
+async function bootstrap() {
+  document.getElementById('today-display').textContent = 'วันนี้: ' + new Date().toLocaleDateString('th-TH', { day: '2-digit', month: 'long', year: 'numeric' });
+  populateSubtypeOptions();
+
+  let waited = 0;
+  while (!window.__firebaseReady && waited < 3000) {
+    await new Promise(r => setTimeout(r, 100));
+    waited += 100;
+  }
+
+  if (!window.__firebaseReady) {
+    console.warn('Firebase not available — ทำงานแบบ offline');
+    setSyncBadge('idle', '(offline)');
+    _isLoadingInitial = false;
+    refreshAll();
+    return;
+  }
+
+  const loaded = await loadFromFirebase();
+  if (!loaded) {
+    console.log('ไม่มีข้อมูลใน DB → save seed data');
+    _isLoadingInitial = false;
+    await saveToFirebase();
+  } else {
+    _isLoadingInitial = false;
+  }
+  refreshAll();
+}
+
+bootstrap();
 </script>
 
 </body>
